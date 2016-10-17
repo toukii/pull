@@ -21,14 +21,25 @@ func init() {
 	flag.BoolVar(&install, "i", false, "-i [true] : go install")
 }
 
-func main() {
+func main()  {
 	flag.Parse()
-	var input, user, repo, branch, input_1 /*,target*/ string
-	tips := "[user/]repo[:branch]  > $"
+	repos:=flag.Args()
+	if len(repos)>0 {
+		for _,it:=range repos{
+			pull(it)
+		}
+	}else{
+		pull("")
+	}
+}
 
+func pull(input string) {
+	var user, repo, branch, input_1 /*,target*/ string
+	if len(input)<=0 {
+	tips := "[user/]repo[:branch]  > $"
 	fmt.Print(tips)
 	fmt.Scanf("%s", &input)
-
+	}
 	start := time.Now()
 	if strings.Contains(input, "/") {
 		inputs := strings.Split(input, "/")
