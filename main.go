@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"flag"
 	"fmt"
 	"github.com/everfore/exc"
-	// "github.com/shaalx/goutils"
-	"flag"
+	"github.com/toukii/goutils"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,24 +23,24 @@ func init() {
 	flag.BoolVar(&install, "i", false, "-i [true] : go install")
 }
 
-func main()  {
+func main() {
 	flag.Parse()
-	repos:=flag.Args()
-	if len(repos)>0 {
-		for _,it:=range repos{
-			pull(it)
+	repos := flag.Args()
+	if len(repos) > 0 {
+		for _, it := range repos {
+			pull(it, true, true)
 		}
-	}else{
-		pull("")
+	} else {
+		pull("", true, true)
 	}
 }
 
-func pull(input string) {
+func pull(input string, writable bool, reinstall bool) {
 	var user, repo, branch, input_1 /*,target*/ string
-	if len(input)<=0 {
-	tips := "[user/]repo[:branch]  > $"
-	fmt.Print(tips)
-	fmt.Scanf("%s", &input)
+	if len(input) <= 0 {
+		tips := "[user/]repo[:branch]  > $"
+		fmt.Print(tips)
+		fmt.Scanf("%s", &input)
 	}
 	start := time.Now()
 	if strings.Contains(input, "/") {
@@ -64,7 +66,7 @@ func pull(input string) {
 	}
 	fmt.Printf("%s/%s:%s\n", user, repo, branch)
 	codeload_uri := ""
-	if !read {
+	if !read && writable {
 		codeload_uri = fmt.Sprintf("git clone --progress --depth 1 git@github.com:%s/%s.git", user, repo)
 	} else {
 		codeload_uri = fmt.Sprintf("git clone --progress --depth 1 git://github.com/%s/%s", user, repo)
@@ -74,8 +76,57 @@ func pull(input string) {
 	os.MkdirAll(target, 0777)
 	cmd := exc.NewCMD(codeload_uri).Env("GOPATH").Cd("src/github.com/").Cd(user).Wd().Debug().Execute()
 	if install {
-		cmd.Cd(repo).Wd().Reset("go install").Execute()
+		var bs []byte
+		var err error
+		for i := 0; i < 2; i++ {
+			if i > 0 || reinstall {
+				bs, err = cmd.Wd().Reset("go install").DoNoTime()
+			} else {
+				bs, err = cmd.Cd(repo).Wd().Reset("go install").DoNoTime()
+			}
+			if err != nil {
+				cloneLoop(bs)
+			} else {
+				break
+			}
+		}
 	}
 
 	fmt.Printf("cost time:%v\n", time.Now().Sub(start))
+}
+
+func cloneLoop(bs []byte) {
+	br := bytes.NewReader(bs)
+	bufr := bufio.NewReader(br)
+	for {
+		bs, err := bufr.ReadSlice('\n')
+		if err != nil {
+			break
+		}
+		bs_str := goutils.ToString(bs)
+		if strings.Contains(bs_str, "cannot find package") {
+			splts := strings.Split(bs_str, "\"")
+			if len(splts) > 1 {
+				repo := splts[1]
+				// go func(repo string) {
+				user_repos := strings.Split(repo, "/")
+				if len(user_repos) > 2 {
+					if !strings.EqualFold(user_repos[0], "github.com") {
+						exc.NewCMD(fmt.Sprintf("go get -u %s", repo))
+						continue
+					}
+					user_repo := fmt.Sprintf("%s/%s", user_repos[1], user_repos[2])
+					fmt.Println(user_repo)
+					if strings.EqualFold(user_repos[1], "toukii") || strings.EqualFold(user_repos[1], "everfore") || strings.EqualFold(user_repos[1], "datc") {
+						pull(user_repo, true, false)
+					} else {
+						pull(user_repo, false, false)
+					}
+				}
+				// }(splts[1])
+				// time.Sleep(1e9)
+			}
+		}
+	}
+
 }
