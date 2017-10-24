@@ -48,7 +48,8 @@ func pull(input string, writable bool, reinstall bool) {
 		user = inputs[0]
 		input_1 = inputs[1]
 	} else if len(input) <= 0 {
-		exc.NewCMD("git pull").Debug().Execute()
+		branch := currentBranch()
+		exc.NewCMD(fmt.Sprintf("git pull origin %s:%s", branch, branch)).Debug().Execute()
 		return
 	} else {
 		pwd, _ := os.Getwd()
@@ -129,4 +130,14 @@ func cloneLoop(bs []byte) {
 		}
 	}
 
+}
+
+func currentBranch() string {
+	bs, err := exc.NewCMD("git rev-parse --abbrev-ref HEAD").DoNoTime()
+	if err != nil {
+		panic(err)
+	}
+	cb := string(bs[:len(bs)-1])
+	fmt.Printf("* %s\n", cb)
+	return cb
 }
