@@ -44,6 +44,9 @@ func pull(input string, writable bool, reinstall bool) {
 	}
 	start := time.Now()
 	if strings.Contains(input, "/") {
+		if strings.HasPrefix(input, "github.com/") {
+			input = input[11:]
+		}
 		inputs := strings.Split(input, "/")
 		user = inputs[0]
 		input_1 = inputs[1]
