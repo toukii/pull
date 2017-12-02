@@ -16,11 +16,13 @@ import (
 var (
 	read    = false // default writeable
 	install = false
+	reclone = false
 )
 
 func init() {
 	flag.BoolVar(&read, "r", false, "-r [true] : git@github.com[false] or git://github.com[true]")
 	flag.BoolVar(&install, "i", false, "-i [true] : go install")
+	flag.BoolVar(&reclone, "c", false, "-c [true] re clone")
 }
 
 func main() {
@@ -69,6 +71,7 @@ func pull(input string, writable bool, reinstall bool) {
 		branch = "master"
 	}
 	fmt.Printf("%s/%s:%s\n", user, repo, branch)
+
 	codeload_uri := ""
 	if !read && writable {
 		codeload_uri = fmt.Sprintf("git clone --progress --depth 1 git@github.com:%s/%s.git", user, repo)
@@ -77,6 +80,14 @@ func pull(input string, writable bool, reinstall bool) {
 	}
 	GOPATH := os.Getenv("GOPATH")
 	target := filepath.Join(GOPATH, "src", "github.com", user, repo)
+	if pathExists(target) {
+		if reclone {
+			exc.NewCMD("rm -rf " + repo).Env("GOPATH").Cd("src/github.com/").Cd(user).Debug().Execute()
+		} else {
+			fmt.Println("repo already exists, try to use falg: -c")
+			return
+		}
+	}
 	os.MkdirAll(target, 0777)
 	cmd := exc.NewCMD(codeload_uri).Env("GOPATH").Cd("src/github.com/").Cd(user).Wd().Debug().Execute()
 	if install {
@@ -97,6 +108,14 @@ func pull(input string, writable bool, reinstall bool) {
 	}
 
 	fmt.Printf("cost time:%v\n", time.Now().Sub(start))
+}
+
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil || os.IsExist(err) {
+		return true
+	}
+	return false
 }
 
 func cloneLoop(bs []byte) {
