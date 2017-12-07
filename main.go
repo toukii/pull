@@ -95,9 +95,9 @@ func pull(input string, writable bool, reinstall bool) {
 		var err error
 		for i := 0; i < 2; i++ {
 			if i > 0 || reinstall {
-				bs, err = cmd.Wd().Reset("go install").DoNoTime()
+				bs, err = cmd.Wd().Reset("bkg").DoNoTime()
 			} else {
-				bs, err = cmd.Cd(repo).Wd().Reset("go install").DoNoTime()
+				bs, err = cmd.Cd(repo).Wd().Reset("bkg").DoNoTime()
 			}
 			if err != nil {
 				cloneLoop(bs)
