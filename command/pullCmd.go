@@ -49,7 +49,6 @@ func Excute(args []string) error {
 }
 
 func pull(input string, writable bool, reinstall bool) {
-	fmt.Println(input, writable, reinstall)
 	var user, repo, branch, input_1 /*,target*/ string
 	if len(input) <= 0 {
 		tips := "[user/]repo[:branch]  > $"
